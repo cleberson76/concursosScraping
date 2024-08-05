@@ -13,13 +13,13 @@ salvar_json = config('SALVAR_ARQUIVO_JSON')
 def lista_concursos(uf):
     html_text = requests.get('https://concursosnobrasil.com/concursos/'+uf).text
     soup = BeautifulSoup(html_text, 'lxml')
-    table_concursos = soup.find('div', class_='list-concursos')
+    table_concursos = soup.find('main', class_='taxonomy')
     concursos = []
 
     for row in table_concursos.table.tbody:
         concurso = row.find_all('td')
-        concurso_link = concurso[0].find('a', class_='post-title')['href']
-        concurso_titulo = concurso[0].find('a', class_='post-title')['title']
+        concurso_link = concurso[0].find('a')['href']
+        concurso_titulo = concurso[0].find('a')['title']
         concurso_previsto = concurso[0].find('span', class_='label-previsto').text if concurso[0].find('span', class_='label-previsto') else False
         vagas = concurso[0].next_sibling.text
         concurso_pagina = get_concurso_pagina(concurso_link)
@@ -39,7 +39,6 @@ def lista_concursos(uf):
     # Ordena os concursos conforme a data de criação
     concursos.sort(key=lambda x: datetime.strptime(x['data'], '%d/%m/%Y'))
     concursos.reverse()
-
     return concursos
 
 
@@ -47,11 +46,11 @@ def lista_concursos(uf):
 def get_concurso_pagina(link):
     pagina_concurso_html_text = requests.get(link).text
     soup = BeautifulSoup(pagina_concurso_html_text, 'lxml')
-    data_criacao = soup.find('time', class_='post-published created').text if soup.find('time', class_='post-published created') else soup.find('time', class_='post-published updated').text
+    data_criacao = soup.find('time').text if soup.find('time') else soup.find('time').datetime
     data_criacao = data_criacao.split()[0]
 
-    conteudo_html = soup.find('div', class_='entry-content')
-    propagandas = conteudo_html.find_all('div', attrs={'class': re.compile('^concur-prebid-lendo.*')})
+    conteudo_html = soup.find('div', class_='entry-info-text')
+    propagandas = conteudo_html.find_all('div', attrs={'class': re.compile('^concur-prebid-lendo-*.*')})
     for ads in propagandas:
         ads.decompose()
 
@@ -71,13 +70,14 @@ def enviar_lista(lista_json):
 
 
 # os concursos serão filtrados conforme os estados abaixo
-estados = [
-    "AC", "AL", "AP", "AM", "BA", "CE",
-    "DF", "ES", "GO", "MA", "MT", "MS",
-    "MG", "PA", "PB", "PR", "PE", "PI",
-    "RJ", "RN", "RS", "RO", "RR", "SC",
-    "SP", "SE", "TO",
-]
+#estados = [
+#    "AC", "AL", "AP", "AM", "BA", "CE",
+#    "DF", "ES", "GO", "MA", "MT", "MS",
+#    "MG", "PA", "PB", "PR", "PE", "PI",
+#    "RJ", "RN", "RS", "RO", "RR", "SC",
+#    "SP", "SE", "TO",
+#]
+estados = [ "MS" ]
 
 lista_de_concursos = []
 
@@ -87,6 +87,7 @@ if __name__ == '__main__':
         print('Iniciando scraping...')
 
         for uf in estados:
+            #print(lista_concursos(uf))
             lista_de_concursos.append(lista_concursos(uf))
 
         lista_de_concursos = json.dumps(lista_de_concursos)
